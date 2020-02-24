@@ -1,7 +1,7 @@
 /*  dulite.c
  *	purpose:  
  *	action:
- *	note:     
+ *	note: referenced "ls2.c" from lecture 3     
  */
 #include	<stdio.h>
 #include    <stdlib.h>
@@ -16,7 +16,7 @@ static bool aFlag = false;
 static bool kFlag = false;
 
 static int disk_usage(char[]);
-static void showInfo( char *, int );
+static void showInfo( char *, struct stat *, int );
 static bool setOption(char*);
 
 /* main(int ac, char *av[])
@@ -55,7 +55,6 @@ int main(int ac, char *av[]) {
 /* setOption(char*)
  *
  */
-// TODO 
 static bool setOption(char* option)
 {
     if ( '-' == option[0] && strlen(option) > 1 ) 
@@ -99,15 +98,15 @@ static int disk_usage( char pathname[] ) {
         if ( ( dir_ptr = opendir( pathname ) ) == NULL )
             fprintf(stderr,"dulite: cannot access '%s'\n", pathname);
         else {
-            sumBlocks += info.st_blocks;               // add directory's blocks
+            sumBlocks += info.st_blocks;            // get directory's blocks
             while ( ( direntp = readdir( dir_ptr ) ) != NULL )   
-                if ( direntp->d_name[0] != '.' ) {   // skip '.' beginning paths
+                if ( direntp->d_name[0] != '.' ) {  // skip '.' beginning paths
                     char *path;
                     path = malloc( ( strlen(pathname) + strlen(direntp->d_name)
                                         + 2 ) * sizeof( char ) );
                     strcat( strcpy( path, pathname ), "/" ); // concat base path
                     strcat( path, direntp->d_name );  // add file/directory name           
-                    sumBlocks += disk_usage(path);  // add sub files/dirs blocks                  
+                    sumBlocks += disk_usage(path);  // sum sub files/dirs blocks                  
                     free( path );
                 }            
             closedir(dir_ptr);            
@@ -115,7 +114,7 @@ static int disk_usage( char pathname[] ) {
     }
     else                                    /* else a file */
         sumBlocks = info.st_blocks;
-    showInfo( pathname, sumBlocks );
+    showInfo( pathname, &info, sumBlocks );
     return sumBlocks;
 }
 
@@ -123,9 +122,25 @@ static int disk_usage( char pathname[] ) {
  * args: 
  * rets:
  */
-// TODO
-static void showInfo( char *pathname, int sumBlocks )
+// TODO: test flag options working (think they work though)
+static void showInfo( char *pathname, struct stat *info, int sumBlocks )
 {
-	printf( "%-7d ", sumBlocks );
-	printf( "%s\n", pathname);
+	if (aFlag == true) {                   // print files and directories
+        
+        if (kFlag == true)                 // change to 1024-byte blocks?
+            sumBlocks = sumBlocks / 2;
+       
+        printf( "%-7d ", sumBlocks );
+	    printf( "%s\n", pathname);
+    }
+        
+    else                                   // else print just directories
+        if ( S_ISDIR( info->st_mode ) ) {
+            
+            if (kFlag == true)             // change to 1024-byte blocks?
+                sumBlocks = sumBlocks / 2;
+            
+            printf( "%-7d ", sumBlocks );
+	        printf( "%s\n", pathname);
+        }
 }
