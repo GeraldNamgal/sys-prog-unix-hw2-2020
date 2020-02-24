@@ -56,34 +56,29 @@ int main(int ac, char *av[]) {
  *
  */
 // TODO 
-static bool setOption(char* option) {
-    if ( strcmp( "-a", option ) == 0 ) {
-        aFlag = true;
-        return true;
-    }
-    if ( strcmp( "-k", option ) == 0 ) {
-        kFlag = true;
-        return true;
-    }
-    if ( '-' == option[0] && strlen(option) > 1 ) {
-        bool aFlagFound = false, kFlagFound = false;
-        for (size_t i = 1; i < strlen(option); i++) {
-            if ( option[i] != 'a' && option[i] != 'k') {
+static bool setOption(char* option)
+{
+    if ( '-' == option[0] && strlen(option) > 1 ) 
+    {        
+        for (size_t i = 1; i < strlen(option); i++)
+        {
+            if ( option[i] != 'a' && option[i] != 'k')
+            {
                 printf("dulite: invalid option -- '%c'\n", option[i]);
                 exit(1);
             }
-            else if ( aFlagFound == false && option[i] == 'a') {
-                aFlag = true;
-                aFlagFound = true;
-            }
-            else if ( kFlagFound == false && option[i] == 'k') {
-                kFlag = true;
-                kFlagFound = true;
-            }           
+
+            else if ( aFlag == false && option[i] == 'a')
+                aFlag = true;            
+
+            else if ( kFlag == false && option[i] == 'k')
+                kFlag = true;                        
         }        
-        if (aFlagFound || kFlagFound)
+        
+        if (aFlag || kFlag)
             return true;
     }
+
     return false;
 }
 
