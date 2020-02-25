@@ -125,22 +125,33 @@ static int disk_usage( char pathname[] ) {
 // TODO: test flag options working (think they work though)
 static void showInfo( char *pathname, struct stat *info, int sumBlocks )
 {
-	if (aFlag == true) {                   // print files and directories
+	if (aFlag == true) {    // print all files and directories including nesteds
         
-        if (kFlag == true)                 // change to 1024-byte blocks?
+        if (kFlag == true)                        // change to 1024-byte blocks?
             sumBlocks = sumBlocks / 2;
        
         printf( "%-7d ", sumBlocks );
 	    printf( "%s\n", pathname);
     }
-        
-    else                                   // else print just directories
+
+    // TODO: du prints a file's info if it was passed in (not a directory)
+    //       and if a directory is passed in, it doesn't print files (for no a
+    //       flag) <-- create a "command line arg was a directory/file" flag?
+
+    else                         // else print just directories or just the file
         if ( S_ISDIR( info->st_mode ) ) {
             
-            if (kFlag == true)             // change to 1024-byte blocks?
+            if (kFlag == true)                    // change to 1024-byte blocks?
                 sumBlocks = sumBlocks / 2;
             
             printf( "%-7d ", sumBlocks );
 	        printf( "%s\n", pathname);
         }
+        else {
+            if (kFlag == true)                    // change to 1024-byte blocks?
+                sumBlocks = sumBlocks / 2;
+            
+            printf( "%-7d ", sumBlocks );
+	        printf( "%s\n", pathname);
+        }        
 }
