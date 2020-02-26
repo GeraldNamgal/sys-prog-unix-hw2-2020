@@ -26,13 +26,12 @@ static bool setOption(char*);
 // TODO: test arguments more (think they work though)
 int main(int ac, char *av[]) {
 	if ( ac == 1 ) {                           // only one argument
-		root = ".";
-        disk_usage( "." );
+        disk_usage( root = "." );
     }   
     else if ( ac >= 3 ) {                    // three or more arguments
         if ( setOption( av[1] ) && setOption( av[2] ) ) {  // two valid options?       
             if ( ac == 3 ) {                 // only three args total
-                disk_usage( "." );        
+                disk_usage( root = "." );        
                 ac = 1;                      // advance counter (no files given)
             }
             else {                           // more than three args
@@ -47,14 +46,12 @@ int main(int ac, char *av[]) {
     }
     else {                                   // only two arguments
         if ( setOption( av[1] ) ) {          // if valid option given                   
-            disk_usage( "." );
+            disk_usage( root = "." );
             ac = 1;                          // advance counter (no files given)
         }
     }	    
     while ( --ac ) {                          // if filename(s) given
-        av++;
-        root = *av;
-        disk_usage( *av );
+        disk_usage( root = *++av );
     } 
 }
 
