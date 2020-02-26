@@ -92,11 +92,12 @@ static int disk_usage( char pathname[] ) {
 	struct dirent *direntp;		            /* each entry	 */
     struct stat info;
     int sumBlocks = 0;
+    bool isDir = false;                     /* directory flag */
     if ( lstat( pathname, &info) == -1 )	/* cannot stat	 */
 		perror( pathname );			        /* say why	     */    
     if ( S_ISDIR ( info.st_mode ) ) {       /* if directory  */
         if ( ( dir_ptr = opendir( pathname ) ) == NULL )
-            fprintf(stderr,"dulite: cannot access '%s'\n", pathname);
+            fprintf(stderr,"dulite: cannot access '%s': ", pathname);
         else {
             sumBlocks += info.st_blocks;            // get directory's blocks
             while ( ( direntp = readdir( dir_ptr ) ) != NULL )   
@@ -106,7 +107,15 @@ static int disk_usage( char pathname[] ) {
                                         + 2 ) * sizeof( char ) );
                     strcat( strcpy( path, pathname ), "/" ); // concat base path
                     strcat( path, direntp->d_name );  // add file/directory name           
+                    
+                    long loc = telldir(dir_ptr);
+                    closedir(dir_ptr);
+                    
                     sumBlocks += disk_usage(path);  // sum sub files/dirs blocks                  
+                    
+                    dir_ptr = opendir(pathname);
+                    seekdir(dir_ptr, loc);
+                    
                     free( path );
                 }            
             closedir(dir_ptr);            
