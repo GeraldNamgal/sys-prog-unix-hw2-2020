@@ -14,9 +14,10 @@
 
 static bool aFlag = false;
 static bool kFlag = false;
+static char *root;
 
 static int disk_usage(char[]);
-static void showInfo( char *, struct stat *, int , bool );
+static void showInfo( char *, struct stat *, int );
 static bool setOption(char*);
 
 /* main(int ac, char *av[])
@@ -24,8 +25,10 @@ static bool setOption(char*);
  */
 // TODO: test arguments more (think they work though)
 int main(int ac, char *av[]) {
-	if ( ac == 1 )                           // only one argument
-		disk_usage( "." );   
+	if ( ac == 1 ) {                           // only one argument
+		root = ".";
+        disk_usage( "." );
+    }   
     else if ( ac >= 3 ) {                    // three or more arguments
         if ( setOption( av[1] ) && setOption( av[2] ) ) {  // two valid options?       
             if ( ac == 3 ) {                 // only three args total
@@ -48,8 +51,11 @@ int main(int ac, char *av[]) {
             ac = 1;                          // advance counter (no files given)
         }
     }	    
-    while ( --ac )                           // if filename(s) given
-        disk_usage( *++av ); 
+    while ( --ac ) {                          // if filename(s) given
+        av++;
+        root = *av;
+        disk_usage( *av );
+    } 
 }
 
 /* setOption(char*)
@@ -92,11 +98,9 @@ static int disk_usage( char pathname[] ) {
 	struct dirent *direntp;		            /* each entry	 */
     struct stat info;
     int sumBlocks = 0;
-    bool isDir = false;                     /* directory flag */
     if ( lstat( pathname, &info) == -1 )	/* cannot stat	 */
 		perror( pathname );			        /* say why	     */    
     if ( S_ISDIR ( info.st_mode ) ) {       /* if directory  */
-        isDir = true;
         if ( ( dir_ptr = opendir( pathname ) ) == NULL )
             fprintf(stderr,"dulite: cannot access '%s': ", pathname);
         else {
@@ -124,7 +128,7 @@ static int disk_usage( char pathname[] ) {
     }
     else                                    /* else a file */
         sumBlocks = info.st_blocks;
-    showInfo( pathname, &info, sumBlocks, isDir );
+    showInfo( pathname, &info, sumBlocks );
     return sumBlocks;
 }
 
@@ -133,7 +137,7 @@ static int disk_usage( char pathname[] ) {
  * rets:
  */
 // TODO: test flag options working (think they work though)
-static void showInfo( char *pathname, struct stat *info, int sumBlocks, bool isDir )
+static void showInfo( char *pathname, struct stat *info, int sumBlocks )
 {
 	if (aFlag == true) {    // print all files and directories including nesteds
         
@@ -148,7 +152,7 @@ static void showInfo( char *pathname, struct stat *info, int sumBlocks, bool isD
     //       and if a directory is passed in, it doesn't print files (for no a
     //       flag) <-- create a "command line arg was a directory/file" flag?
 
-    else                         // else print just directories or just the file
+    else                         // else print just directories or just the root
         if ( S_ISDIR( info->st_mode ) ) {
             
             if (kFlag == true)                    // change to 1024-byte blocks?
@@ -157,7 +161,7 @@ static void showInfo( char *pathname, struct stat *info, int sumBlocks, bool isD
             printf( "%-7d ", sumBlocks );
 	        printf( "%s\n", pathname);
         }
-        else {
+        else if ( strcmp( pathname, root ) == 0 ) {
             if (kFlag == true)                    // change to 1024-byte blocks?
                 sumBlocks = sumBlocks / 2;
             
