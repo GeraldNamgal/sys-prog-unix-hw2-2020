@@ -16,7 +16,7 @@ static bool aFlag = false;
 static bool kFlag = false;
 
 static int disk_usage(char[]);
-static void showInfo( char *, struct stat *, int );
+static void showInfo( char *, struct stat *, int , bool );
 static bool setOption(char*);
 
 /* main(int ac, char *av[])
@@ -96,6 +96,7 @@ static int disk_usage( char pathname[] ) {
     if ( lstat( pathname, &info) == -1 )	/* cannot stat	 */
 		perror( pathname );			        /* say why	     */    
     if ( S_ISDIR ( info.st_mode ) ) {       /* if directory  */
+        isDir = true;
         if ( ( dir_ptr = opendir( pathname ) ) == NULL )
             fprintf(stderr,"dulite: cannot access '%s': ", pathname);
         else {
@@ -123,7 +124,7 @@ static int disk_usage( char pathname[] ) {
     }
     else                                    /* else a file */
         sumBlocks = info.st_blocks;
-    showInfo( pathname, &info, sumBlocks );
+    showInfo( pathname, &info, sumBlocks, isDir );
     return sumBlocks;
 }
 
@@ -132,7 +133,7 @@ static int disk_usage( char pathname[] ) {
  * rets:
  */
 // TODO: test flag options working (think they work though)
-static void showInfo( char *pathname, struct stat *info, int sumBlocks )
+static void showInfo( char *pathname, struct stat *info, int sumBlocks, bool isDir )
 {
 	if (aFlag == true) {    // print all files and directories including nesteds
         
