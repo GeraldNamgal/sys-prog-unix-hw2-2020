@@ -25,9 +25,8 @@ static bool setOption(char*);
  */
 // TODO: test arguments more (think they work though)
 int main(int ac, char *av[]) {
-	if ( ac == 1 ) {                           // only one argument
-        disk_usage( root = "." );
-    }   
+	if ( ac == 1 )                           // only one argument
+        disk_usage( root = "." );  
     else if ( ac >= 3 ) {                    // three or more arguments
         if ( setOption( av[1] ) && setOption( av[2] ) ) {  // two valid options?       
             if ( ac == 3 ) {                 // only three args total
@@ -50,7 +49,7 @@ int main(int ac, char *av[]) {
             ac = 1;                          // advance counter (no files given)
         }
     }	    
-    while ( --ac ) {                          // if filename(s) given
+    while ( --ac ) {                         // if filename(s) given
         disk_usage( root = *++av );
     } 
 }
@@ -91,19 +90,20 @@ static bool setOption(char* option)
  *       https://stackoverflow.com/questions/276827/string-padding-in-c	
  */
 static int disk_usage( char pathname[] ) {
-	DIR	*dir_ptr;		                    /* the directory */
-	struct dirent *direntp;		            /* each entry	 */
+	DIR	*dir_ptr;		                                        // the directory 
+	struct dirent *direntp;		                                   // each entry	 
     struct stat info;
     int sumBlocks = 0;
-    if ( lstat( pathname, &info) == -1 )	/* cannot stat	 */
-		perror( pathname );			        /* say why	     */    
-    if ( S_ISDIR ( info.st_mode ) ) {       /* if directory  */
+    if ( lstat( pathname, &info) == -1 )	                      // cannot stat	 
+		perror( pathname );			                                  // say why	         
+    //if ( S_ISDIR ( info.st_mode ) ) {                            // if directory  
+        // TODO: proper error message
         if ( ( dir_ptr = opendir( pathname ) ) == NULL )
-            fprintf(stderr,"dulite: cannot access '%s': ", pathname);
+            perror("dulite: cannot access '%s': ");
         else {
-            sumBlocks += info.st_blocks;            // get directory's blocks
+            sumBlocks += info.st_blocks;               // get directory's blocks
             while ( ( direntp = readdir( dir_ptr ) ) != NULL )   
-                if ( direntp->d_name[0] != '.' ) {  // skip '.' beginning paths
+                if ( direntp->d_name[0] != '.' ) {   // skip '.' beginning paths
                     char *path;
                     path = malloc( ( strlen(pathname) + strlen(direntp->d_name)
                                         + 2 ) * sizeof( char ) );
@@ -122,10 +122,10 @@ static int disk_usage( char pathname[] ) {
                 }            
             closedir(dir_ptr);            
         }
-    }
-    else                                    /* else a file */
+    //}
+    //else                                                          // else a file
         sumBlocks = info.st_blocks;
-    showInfo( pathname, &info, sumBlocks );
+    //showInfo( pathname, &info, sumBlocks );               // print file/dir path
     return sumBlocks;
 }
 
@@ -134,8 +134,7 @@ static int disk_usage( char pathname[] ) {
  * rets:
  */
 // TODO: test flag options working (think they work though)
-static void showInfo( char *pathname, struct stat *info, int sumBlocks )
-{
+static void showInfo( char *pathname, struct stat *info, int sumBlocks ) {
 	if (aFlag == true) {    // print all files and directories including nesteds
         
         if (kFlag == true)                        // change to 1024-byte blocks?
@@ -158,7 +157,7 @@ static void showInfo( char *pathname, struct stat *info, int sumBlocks )
             printf( "%-7d ", sumBlocks );
 	        printf( "%s\n", pathname);
         }
-        else if ( strcmp( pathname, root ) == 0 ) {
+        else if ( strcmp( pathname, root ) == 0 ) {   // only print file if root
             if (kFlag == true)                    // change to 1024-byte blocks?
                 sumBlocks = sumBlocks / 2;
             
