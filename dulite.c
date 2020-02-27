@@ -9,6 +9,7 @@
 #include	<dirent.h>
 #include	<sys/stat.h>
 #include	<string.h>
+#include    <errno.h>
 
 #define	DATE_FMT	"%b %e %H:%M"		/* text format	*/
 
@@ -61,12 +62,15 @@ static bool setOption(char* option)
 {
     if ( '-' == option[0] && strlen(option) > 1 ) 
     {        
+        bool foundInvOption = false;
+        
         for (size_t i = 1; i < strlen(option); i++)
         {
             if ( option[i] != 'a' && option[i] != 'k')
-            {
-                printf("dulite: invalid option -- '%c'\n", option[i]);
-                exit(1);
+            {  
+                fprintf(stderr, "dulite: invalid option -- '%c'\n", option[i]);
+                if ( foundInvOption == false )
+                    foundInvOption = true;
             }
 
             else if ( aFlag == false && option[i] == 'a')
@@ -74,7 +78,10 @@ static bool setOption(char* option)
 
             else if ( kFlag == false && option[i] == 'k')
                 kFlag = true;                        
-        }        
+        }
+
+        if (foundInvOption == true)
+            exit(1);        
         
         if (aFlag || kFlag)
             return true;
@@ -94,12 +101,17 @@ static int disk_usage( char pathname[] ) {
 	struct dirent *direntp;		                                   // each entry	 
     struct stat info;
     int sumBlocks = 0;
-    if ( lstat( pathname, &info) == -1 )	                      // cannot stat	 
-		perror( pathname );			                                  // say why	         
-    //if ( S_ISDIR ( info.st_mode ) ) {                            // if directory  
-        // TODO: proper error message
-        if ( ( dir_ptr = opendir( pathname ) ) == NULL )
-            perror("dulite: cannot access '%s': ");
+    if ( lstat( pathname, &info) == -1 ) {	                     // cannot lstat	 
+		fprintf(stderr, "dulite: cannot access '%s': %s\n"            // say why
+                , pathname, strerror(errno));                         	         
+        exit(1);
+    }
+    if ( S_ISDIR ( info.st_mode ) ) {                            // if directory  
+        if ( ( dir_ptr = opendir( pathname ) ) == NULL ) {
+            fprintf(stderr, "dulite: cannot access '%s': %s\n"
+                    , pathname, strerror(errno));
+            exit(1);
+        }            
         else {
             sumBlocks += info.st_blocks;               // get directory's blocks
             while ( ( direntp = readdir( dir_ptr ) ) != NULL )   
@@ -119,13 +131,13 @@ static int disk_usage( char pathname[] ) {
                     seekdir(dir_ptr, loc);
                     
                     free( path );
-                }            
+                }                    
             closedir(dir_ptr);            
         }
-    //}
-    //else                                                          // else a file
+    }
+    else                                                          // else a file
         sumBlocks = info.st_blocks;
-    //showInfo( pathname, &info, sumBlocks );               // print file/dir path
+    showInfo( pathname, &info, sumBlocks );               // print file/dir path
     return sumBlocks;
 }
 
