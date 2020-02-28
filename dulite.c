@@ -18,7 +18,7 @@ static bool kFlag = false;
 static char *root;
 
 static int disk_usage(char[]);
-static void readdirLite( char **, struct stat *, DIR **, int * ); 
+static void traverseDir( char **, DIR **, int * ); 
 static void showInfo( char *, struct stat *, int );               
 
 /* main(int ac, char *av[])
@@ -63,15 +63,15 @@ bool setOption(char* option)
 {
     if ( '-' == option[0] && strlen(option) > 1 ) 
     {        
-        bool foundInvOption = false;
+        bool foundInvalidOpt = false;
         
         for (size_t i = 1; i < strlen(option); i++)
         {
             if ( option[i] != 'a' && option[i] != 'k')
             {  
                 fprintf(stderr, "dulite: invalid option -- '%c'\n", option[i]);
-                if ( foundInvOption == false )
-                    foundInvOption = true;
+                if ( foundInvalidOpt == false )
+                    foundInvalidOpt = true;
             }
 
             else if ( aFlag == false && option[i] == 'a')
@@ -81,7 +81,7 @@ bool setOption(char* option)
                 kFlag = true;                        
         }
 
-        if (foundInvOption == true)
+        if (foundInvalidOpt == true)
             exit(1);        
         
         if (aFlag || kFlag)
@@ -94,8 +94,7 @@ bool setOption(char* option)
 /* disk_usage( char pathname[] )
  * args: 
  * rets:
- * note: referenced
- *       https://stackoverflow.com/questions/276827/string-padding-in-c	
+ * note:
  */
 static int disk_usage( char pathname[] ) {
 	DIR	*dir_ptr;		                                        // the directory 	 
@@ -104,64 +103,80 @@ static int disk_usage( char pathname[] ) {
 
     if ( lstat( pathname, &info) == -1 ) {	                     // cannot lstat	 
 		fprintf(stderr, "dulite: cannot access '%s': %s\n"            
-                , pathname, strerror(errno));                         // say why         
-        exit(1);
+                , pathname, strerror(errno));                         // say why
+        return sumBlocks;
     }
     
     if ( S_ISDIR ( info.st_mode ) ) {                            // if directory  
     
         if ( ( dir_ptr = opendir( pathname ) ) == NULL ) {     // cannot opendir
-            fprintf(stderr, "dulite: cannot access '%s': %s\n"        
+            fprintf(stderr, "dulite: cannot read directory '%s': %s\n"        
                     , pathname, strerror(errno));                     // say why
-            exit(1);
-        }            
-    
+        }   
+        
         else                       
-            readdirLite( &pathname, &info, &dir_ptr, &sumBlocks ) ;
+            traverseDir( &pathname, &dir_ptr, &sumBlocks );
+        
+        sumBlocks += info.st_blocks;               // blocks of directory itself 
     }
     
     else                                                          // else a file
         sumBlocks = info.st_blocks;
-    
-    showInfo( pathname, &info, sumBlocks );      // print pathname (file or dir)
+
+    showInfo( pathname, &info, sumBlocks );           // print file/dir pathname
     
     return sumBlocks;
 }
 
-/* readdirLite
+/* traverseDir
  *
  */
-void readdirLite( char **pathname, struct stat *info, DIR **dir_ptr
-                        , int *sumBlocks )
+void traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks )
 {
-    struct dirent *direntp;		                                   // each entry
-    
-    *sumBlocks += info->st_blocks;                     // get directory's blocks    
-    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )   
-        
-        if ( direntp->d_name[0] != '.' ) {           // skip '.' beginning paths
-            
-            char *path;
-            path = malloc( ( strlen(*pathname) + strlen(direntp->d_name)
-                                + 2 ) * sizeof( char ) );            
-            strcat( strcpy( path, *pathname ), "/" );        // concat base path
-            strcat( path, direntp->d_name );          // add file/directory name          
-            
-            long loc = telldir( *dir_ptr );   // save current place in directory
-            closedir( *dir_ptr );          // close directory (before recursion)
-            
-            *sumBlocks += disk_usage(path); // sum sub file/dir blocks (recurse)        
-            
-            if ( ( *dir_ptr = opendir( *pathname ) ) == NULL ) {   // reopen dir
-                fprintf(stderr, "dulite: cannot access '%s': %s\n"        
-                        , *pathname, strerror(errno));                     
-                exit(1);
-            }                           
-            seekdir(*dir_ptr, loc);                    // go back to saved place
-            
-            free( path );
+    struct dirent *direntp;		                                   // each entry     
+    void saveLocation( DIR **, long * );                  // declare utility fxn
+    void backToSaved( char **, DIR **, long * );          // declare utility fxn
+    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )              // traverse         
+        if ( strcmp( direntp->d_name, "." ) != 0
+             && strcmp( direntp->d_name, ".." ) != 0) {     // skip "." and ".."            
+            char *subpath;
+            subpath = malloc( strlen(*pathname) + strlen(direntp->d_name) + 2 );  
+            // TODO: check if malloc failed            
+            strcat( strcpy( subpath, *pathname ), "/" );     // concat base path
+            strcat( subpath, direntp->d_name );   // add sub file/directory name           
+            struct stat buff;                               // for lstat subpath
+            long loc = (long) NULL;            
+            if ( lstat( subpath, &buff ) == -1 )       // if can't lstat subpath          
+                saveLocation( dir_ptr, &loc );
+            else if ( S_ISDIR( buff.st_mode ) )           // if subpath is a dir
+                saveLocation( dir_ptr, &loc );
+            *sumBlocks += disk_usage(subpath);       // sum sub blocks (recurse)           
+            if ( loc != (long) NULL)                  // if a location was saved
+                backToSaved( pathname, dir_ptr, &loc );   
+            free( subpath );
         } 
     closedir(*dir_ptr); 
+}
+
+/*
+ *
+ */
+void saveLocation( DIR **dir_ptr, long *loc )
+{
+    *loc = telldir( *dir_ptr );                  // save current location in dir
+    closedir( *dir_ptr );                        // close dir (before recursion)
+}
+
+/*
+ *
+ */
+void backToSaved( char **pathname, DIR **dir_ptr, long *loc )
+{
+    if ( ( *dir_ptr = opendir( *pathname ) ) == NULL )             // reopen dir   
+        fprintf(stderr, "dulite: cannot access '%s': %s\n"        
+                , *pathname, strerror(errno));                              
+    
+    seekdir(*dir_ptr, *loc);                        // go back to saved location
 }
 
 /* showInfo( char *pathname, int sumBlocks )
@@ -169,33 +184,33 @@ void readdirLite( char **pathname, struct stat *info, DIR **dir_ptr
  * rets:
  */
 // TODO: test flag options working (think they work though)
-static void showInfo( char *pathname, struct stat *info, int sumBlocks ) {
-	
-    if (aFlag == true) {    // print all files and directories including nesteds
-        
+static void showInfo( char *pathname, struct stat *info, int sumBlocks )
+{
+    if (aFlag == true)                          // print all files/dirs and subs
+    {
         if (kFlag == true)                        // change to 1024-byte blocks?
             sumBlocks = sumBlocks / 2;
        
-        printf( "%-7d ", sumBlocks );
+        printf( "%d\t", sumBlocks );
 	    printf( "%s\n", pathname);
     }
 
-    else                         // else print just directories or just the root
+    else                                    // else print just dirs or just root
     
-        if ( S_ISDIR( info->st_mode ) ) {
-            
+        if ( S_ISDIR( info->st_mode ) ) 
+        {    
             if (kFlag == true)                    // change to 1024-byte blocks?
                 sumBlocks = sumBlocks / 2;
             
-            printf( "%-7d ", sumBlocks );
+            printf( "%d\t", sumBlocks );
 	        printf( "%s\n", pathname);
         }    
-        else if ( strcmp( pathname, root ) == 0 ) {   // only print file if root
-    
+        else if ( strcmp( pathname, root ) == 0 )     // only print file if root
+        {
             if (kFlag == true)                    // change to 1024-byte blocks?
                 sumBlocks = sumBlocks / 2;
             
-            printf( "%-7d ", sumBlocks );
+            printf( "%d\t", sumBlocks );
 	        printf( "%s\n", pathname);
         }        
 }
