@@ -68,12 +68,10 @@ bool setOption(char *option)
     {        
         bool foundInvalidOpt = false;
         
-        for (size_t i = 1; i < strlen(option); i++)
-        {
+        for (size_t i = 1; i < strlen(option); i++) {
             if ( option[i] != 'a' && option[i] != 'k')
             {  
-                fprintf(stderr, "dulite: invalid option -- '%c'\n", option[i]);
-                fprintf(stderr, "Usage: ./dulite [-ak] [FILE]...\n");
+                fprintf(stderr, "dulite: invalid option -- '%c'\n", option[i]);                
                 if ( foundInvalidOpt == false )
                     foundInvalidOpt = true;
             }
@@ -85,13 +83,14 @@ bool setOption(char *option)
                 kFlag = true;                        
         }
 
-        if (foundInvalidOpt == true)
+        if (foundInvalidOpt == true) {
+            fprintf(stderr, "Usage: ./dulite [-ak] [FILE]...\n");
             exit(1);        
-        
+        }
+
         if (aFlag || kFlag)
             return true;
     }
-
     return false;
 }
 
@@ -161,7 +160,7 @@ void traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks )
             else if ( S_ISDIR( buff.st_mode ) )           // if subpath is a dir
                 saveLocation( dir_ptr, &loc );
             *sumBlocks += disk_usage(subpath);       // sum sub blocks (recurse)           
-            if ( loc != (long) NULL)                  // if a location was saved
+            if ( loc != (long) NULL )                 // if a location was saved
                 backToSaved( pathname, dir_ptr, &loc );   
             free( subpath );
         } 
