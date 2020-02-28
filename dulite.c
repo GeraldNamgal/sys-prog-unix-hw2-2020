@@ -22,10 +22,13 @@ static void traverseDir( char **, DIR **, int * );
 static void showInfo( char *, struct stat *, int );               
 
 /* main(int ac, char *av[])
- * 
+ * purpose: 
+ * args: 
+ * rets: 
  */
 // TODO: test arguments more (think they work though)
-int main(int ac, char *av[]) {
+int main(int ac, char *av[])
+{
     bool setOption(char*);                   // fxn declaration
 	if ( ac == 1 )                           // only one argument
         disk_usage( root = "." );  
@@ -45,21 +48,21 @@ int main(int ac, char *av[]) {
             av += 1;                         // advance pointer past option arg        
         }
     }
-    else {                                   // only two arguments
+    else                                     // only two arguments
         if ( setOption( av[1] ) ) {          // if valid option given                   
             disk_usage( root = "." );
             ac = 1;                          // advance counter (no files given)
-        }
-    }	    
-    while ( --ac ) {                         // if filename(s) given
-        disk_usage( root = *++av );
-    } 
+        }    	    
+    while ( --ac )                           // if filename(s) given
+        disk_usage( root = *++av ); 
 }
 
-/* setOption(char*)
- *
+/* setOption(char *option)
+ * purpose: 
+ * args: 
+ * rets: 
  */
-bool setOption(char* option)
+bool setOption(char *option)
 {
     if ( '-' == option[0] && strlen(option) > 1 ) 
     {        
@@ -92,9 +95,9 @@ bool setOption(char* option)
 }
 
 /* disk_usage( char pathname[] )
+ * purpose:
  * args: 
  * rets:
- * note:
  */
 static int disk_usage( char pathname[] ) {
 	DIR	*dir_ptr;		                                        // the directory 	 
@@ -128,24 +131,30 @@ static int disk_usage( char pathname[] ) {
     return sumBlocks;
 }
 
-/* traverseDir
- *
+/* traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks )
+ * purpose:
+ * args:
+ * rets:
  */
 void traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks )
 {
     struct dirent *direntp;		                                   // each entry     
     void saveLocation( DIR **, long * );                  // declare utility fxn
     void backToSaved( char **, DIR **, long * );          // declare utility fxn
-    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )              // traverse         
+    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )          // traverse dir        
         if ( strcmp( direntp->d_name, "." ) != 0
              && strcmp( direntp->d_name, ".." ) != 0) {     // skip "." and ".."            
             char *subpath;
             subpath = malloc( strlen(*pathname) + strlen(direntp->d_name) + 2 );  
-            // TODO: check if malloc failed            
+            if( subpath == NULL ) {                          // if malloc failed
+                fprintf(stderr, "dulite: could not malloc: %s\n"
+                        , strerror(errno));
+                exit(1);
+            }            
             strcat( strcpy( subpath, *pathname ), "/" );     // concat base path
-            strcat( subpath, direntp->d_name );   // add sub file/directory name           
-            struct stat buff;                               // for lstat subpath
-            long loc = (long) NULL;            
+            strcat( subpath, direntp->d_name );                // add sub's name           
+            struct stat buff;                            // for lstat on subpath
+            long loc = (long) NULL;         // to save location (before recurse)
             if ( lstat( subpath, &buff ) == -1 )       // if can't lstat subpath          
                 saveLocation( dir_ptr, &loc );
             else if ( S_ISDIR( buff.st_mode ) )           // if subpath is a dir
@@ -163,8 +172,8 @@ void traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks )
  */
 void saveLocation( DIR **dir_ptr, long *loc )
 {
-    *loc = telldir( *dir_ptr );                  // save current location in dir
-    closedir( *dir_ptr );                        // close dir (before recursion)
+    *loc = telldir( *dir_ptr );                          // save location in dir
+    closedir( *dir_ptr );                                           // close dir 
 }
 
 /*
@@ -172,11 +181,11 @@ void saveLocation( DIR **dir_ptr, long *loc )
  */
 void backToSaved( char **pathname, DIR **dir_ptr, long *loc )
 {
-    if ( ( *dir_ptr = opendir( *pathname ) ) == NULL )             // reopen dir   
+    if ( ( *dir_ptr = opendir( *pathname ) ) == NULL )               // open dir   
         fprintf(stderr, "dulite: cannot access '%s': %s\n"        
                 , *pathname, strerror(errno));                              
     
-    seekdir(*dir_ptr, *loc);                        // go back to saved location
+    seekdir(*dir_ptr, *loc);                            // go to location in dir
 }
 
 /* showInfo( char *pathname, int sumBlocks )
