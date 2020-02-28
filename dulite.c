@@ -73,6 +73,7 @@ bool setOption(char *option)
             if ( option[i] != 'a' && option[i] != 'k')
             {  
                 fprintf(stderr, "dulite: invalid option -- '%c'\n", option[i]);
+                fprintf(stderr, "Usage: ./dulite [-ak] [FILE]...\n");
                 if ( foundInvalidOpt == false )
                     foundInvalidOpt = true;
             }
