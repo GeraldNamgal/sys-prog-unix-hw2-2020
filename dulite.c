@@ -141,23 +141,18 @@ static int disk_usage( char pathname[] ) {
  *       http://man7.org/linux/man-pages/man3/telldir.3.html
  */
 void traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks ) {
-    struct dirent *direntp;		                     // each entry   
+    struct dirent *direntp;		                            // each entry   
     errno = 0;                       // distinguishes error from no more entries
-    while (1) {                                      // traverse dir        
-        direntp = readdir( *dir_ptr );
-        if (errno != 0) {                            // readdir() error
-            //fprintf(stderr, "dulite: read error in '%s'\n", *pathname);
-            errno = 0; }                      // reset errno
-        if ( direntp == NULL )                  
-            break;                                   // break if no more entries
-        else if ( strcmp( direntp->d_name, "." ) != 0
-                 && strcmp( direntp->d_name, ".." ) != 0) { // skip "." and ".."            
+    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )     // traverse dir        
+        if ( strcmp( direntp->d_name, "." ) != 0
+              && strcmp( direntp->d_name, ".." ) != 0) {    // skip "." and ".."            
             char *subpath;
             subpath = malloc( strlen(*pathname) + strlen(direntp->d_name) + 2 );  
-            if( subpath == NULL ) {                  // if malloc failed
+            if( subpath == NULL ) {                         // if malloc failed
                 fprintf(stderr, "dulite: malloc error: %s\n", strerror(errno));
-                exit(1); }            
-            strcat( strcpy( subpath, *pathname ), "/" ); // concat base path
+                exit(1);
+            }            
+            strcat( strcpy( subpath, *pathname ), "/" );    // concat base path
             strcat( subpath, direntp->d_name );      // add subpath's name           
             struct stat buff;                        // for lstat on subpath
             long loc = -1;                  // to save location (before recurse)
@@ -169,10 +164,11 @@ void traverseDir( char **pathname, DIR **dir_ptr , int *sumBlocks ) {
             if ( loc != -1 )                         // if a location was saved
                 backToSaved( pathname, dir_ptr, &loc );   
             free( subpath );
-        }
-    } 
-    if ( closedir(*dir_ptr) == -1 )
-        fprintf(stderr, "dulite: can't close '%s'\n" , *pathname);
+        } 
+    if ( closedir(*dir_ptr) == -1 ) {
+        fprintf(stderr, "dulite: can't close '%s': %s\n"
+                , *pathname, strerror(errno));
+    }
 }
 
 /*
@@ -215,6 +211,7 @@ static void backToSaved( char **pathname, DIR **dir_ptr, long *loc )
 }
 
 /* showInfo( char *pathname, int sumBlocks )
+ * purpose: 
  * args: 
  * rets:
  */
